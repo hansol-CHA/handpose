@@ -1,136 +1,131 @@
-import React, { useEffect, useRef, useState } from 'react';
+import * as tf from '@tensorflow/tfjs';
+import * as mobilenet from '@tensorflow-models/mobilenet';
+import * as knnClassifier from '@tensorflow-models/knn-classifier'
 import Webcam from 'react-webcam';
-import * as tf from "@tensorflow/tfjs";
-import * as mobilenet from "@tensorflow-models/mobilenet";
-import * as knnClassifier from "@tensorflow-models/knn-classifier";
+import React, { useRef, useEffect } from 'react';
 
-function Classifier () {
+function Classifier() {
   const webcamRef = useRef(null);
-  const buttonA = useRef(null);
-  const buttonB = useRef(null);
-  const buttonC = useRef(null);
-  const classRef = useRef(null);
+  const camera = useRef();
+  const figures = useRef();
 
-  const [inputs, setInputs] = useState({
-    A: "",
-    B: "",
-    C: "",
-  })
+  const btnA = useRef();
+  const btnB = useRef();
+  const btnC = useRef();
+  const btnExport = useRef();
 
-  const { A, B, C } = inputs;
-  console.log("A", A)
-  console.log("B", B)
-  console.log("C", C)
-
-  const classifier = knnClassifier.create();
   let net;
+  /**
+   * @type {knnClassifier}
+   */
+  const classifier = knnClassifier.create();
+  const webcamElement = camera.current;
+  console.log('Loading mobilenet..');
 
-  const runClasssifier = async () => {
+  const run = async () => {
+    console.log("run 실행")
     net = await mobilenet.load();
-
-    const webcam = await tf.data.webcam(webcamRef.current, {
-      resizeHeight: 480,
-      resizeWidth: 640,
+    const webcam = await tf.data.webcam(webcamRef.current.video, {
+      resizeHeight: 224,
+      resizeWidth: 224
     });
-    console.log(webcam);
+    // const webcam = await tf.data.webcam(webcamElement, {
+    //   resizeHeight: 224,
+    //   resizeWidth: 224
+    // });
 
-    const addExample = async (classId) => {
+      const addExample = async classId => {
+      // Capture an image from the web camera.
       const img = await webcam.capture();
 
-      const activation = net.infer(img, "conv_preds");
+      // Get the intermediate activation of MobileNet 'conv_preds' and pass that
+      // to the KNN classifier.
+      const activation = net.infer(img, true);
 
+      // Pass the intermediate activation to the classifier.
       classifier.addExample(activation, classId);
 
-      img.dispose(); // 메모리 삭제
+      // Dispose the tensor to release the memory.
+      img.dispose();
+    };
+    const exportProc = () => {
+
+      let dataset = classifier.getClassifierDataset()
+      var datasetObj = {}
+      Object.keys(dataset).forEach(async (key) => {
+        let data = await dataset[key].dataSync();
+        // use Array.from() so when JSON.stringify() it covert to an array string e.g [0.1,-0.2...] 
+        // instead of object e.g {0:"0.1", 1:"-0.2"...}
+        datasetObj[key] = Array.from(data);
+      });
+      let jsonStr = JSON.stringify(datasetObj)
+      //can be change to other source
+      let downloader = document.createElement("a");
+      downloader.download = "model.json";
+      downloader.href = "data:text/text;charset=utf-8," + encodeURIComponent(jsonStr);
+      document.body.appendChild(downloader);
+      downloader.click();
+      downloader.remove();
+      // localStorage.setItem("myData", jsonStr);
     }
 
-    buttonA.current.addEventListener("click", () => addExample(A));
-    buttonB.current.addEventListener("click", () => addExample(B));
-    buttonC.current.addEventListener("click", () => addExample(C));
+    btnA.current.addEventListener('click', () => addExample('cup'));
+    btnB.current.addEventListener('click', () => addExample('bottle'));
+    btnC.current.addEventListener('click', () => addExample('phone'));
+    btnExport.current.addEventListener('click', () => exportProc());
 
     while (true) {
       if (classifier.getNumClasses() > 0) {
         const img = await webcam.capture();
-
-        const activation = net.infer(img, "conv_preds");
+        // Get the activation from mobilenet from the webcam.
+        const activation = net.infer(img, 'conv_preds');
+        // Get the most likely class and confidence from the classifier module.
         const result = await classifier.predictClass(activation);
-        console.log(result)
 
-        if (classRef.current) {
-          classRef.current.innerText = `predictions: ${result.label} probability: ${result.confidences[result.label]}`
+        //const result = await net.classify(img);
+
+        if (figures.current) {
+          //const classes = ['A', 'B', 'C'];
+          figures.current.innerText = `
+        prediction: ${result.label} \n
+        probability: ${result.confidences[result.label]}
+        `;
+          //figures.current.innerText = `Prediction: ${ result[0].className } \n probability: ${ result[0].probability } `;
         }
-
         img.dispose();
       }
-
       await tf.nextFrame();
     }
-  }
+  };
 
   useEffect(() => {
-    if (webcamRef.current) {
-      runClasssifier();
-    }
-  }, [webcamRef])
+    console.log("video", camera.current)
+    console.log("reactWebcam", webcamRef.current)
 
-  const handleInputsChange = (e) => {
-    const { value, name } = e.target;
-    setInputs({
-      ...inputs,
-      [name]: value
-    })
-  }
+    if (webcamRef.current) { run(); }
+  }, [webcamRef]);
 
   return (
-    <div>
-      <div ref={classRef}></div>
-      <video 
-        autoPlay
-        playsInline
-        muted={true}
-        ref={webcamRef}
-        style={{
-          position: "absolute",
-          marginLeft: "auto",
-          marginRight: "auto",
-          left: 0,
-          right: 0,
-          textAlign: "center",
-          zIndex: 9,
-          width: 640,
-          height: 480,
-        }}
-      />
-      {/* <Webcam 
-      ref={webcamRef}
-      style={{
-        position: "absolute",
-        marginLeft: "auto",
-        marginRight: "auto",
-        left: 0,
-        right: 0,
-        textAlign: "center",
-        zIndex: 9,
-        width: 640,
-        height: 480,
-      }} /> */}
+    <div className="App">
+      <div ref={figures}></div>
+
+      {/* <video autoPlay playsInline muted={true}
+        ref={camera}
+        width="640" height="480"></video> */}
+
+      <Webcam ref={webcamRef} width="640" height="480" />
+
       <div>
-          <input name="A" onChange={handleInputsChange} value={A} />
-          <button ref={buttonA}>add A</button>
+        <button ref={btnA}> add cup</button>
+        <button ref={btnB}> add Bottle</button>
+        <button ref={btnC}> add phone</button>
       </div>
       <div>
-          <input name="B" onChange={handleInputsChange} value={B} />
-          <button ref={buttonB}>add B</button>
+        export..
+        <button ref={btnExport}> export</button>
       </div>
-      <div>
-          <input name="C" onChange={handleInputsChange} value={C} />
-          <button ref={buttonC}>add C</button>
-      </div>
-      <div>
-        <button>export</button>
-      </div>
-      
     </div>
-    )
+  );
 }
+
 export default Classifier;
