@@ -8,9 +8,34 @@ import '@tensorflow/tfjs-backend-webgl';
 import GestureEstimator from './Fingerpose/GestureEstimator';
 import Gestures from "./Fingerpose/Gestures/index"
 import { drawHand } from "./utility"
+import { useUserMedia } from "./webcam"
+
+const $size = { width: 640, height: 480 };
+const $mobile_size = { width: 360, height: 270 };
+
+const isIOS = () => {
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
+const isAndroid = () => {
+  return /Android/i.test(navigator.userAgent);
+}
+
+const isMobile = () => {
+  return isAndroid() || isIOS();
+}
+
+const videoConfig = {
+  "audio": false,
+  "video": {
+    facingMode: "user",
+    width: isMobile() ? $mobile_size.width  : $size.width,
+    height: isMobile() ? $mobile_size.height : $size.height,
+  }
+};
 
 function Handpose() {
-  const webcamRef = useRef(null);
+  const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
   const createDetector = async () => {
@@ -24,32 +49,35 @@ function Handpose() {
     return handPoseDetection.createDetector(hands, detectorConfig);
   }
 
+  const setUpCamera = async () => {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      console.log("사용 가능한 미디어 디바이스가 없습니다. ")
+      return;
+    }
+  
+    const stream = await navigator.mediaDevices.getUserMedia(videoConfig);
+
+    videoRef.current.srcObject = stream;
+    videoRef.current.play();
+  }
+
   const detection = async (detector) => {
-    if (typeof webcamRef.current !== "undefined" &&
-    webcamRef.current !== null && webcamRef.current.video.readyState === 4
-    ) {
+    if (videoRef.current && videoRef.current.readyState === 4) {
+      
+    videoRef.current.width = isMobile() ? $mobile_size.width  : $size.width;
+    videoRef.current.height = isMobile() ? $mobile_size.height : $size.height;
+    canvasRef.current.width = isMobile() ? $mobile_size.width  : $size.width;
+    canvasRef.current.height = isMobile() ? $mobile_size.height : $size.height;
 
-    const video = webcamRef.current.video;
-    const videoWidth = webcamRef.current.video.videoWidth;
-    const videoHeight = webcamRef.current.video.videoHeight;
-
-    webcamRef.current.video.width = videoWidth;
-    webcamRef.current.video.height = videoHeight;
-
-    canvasRef.current.width = videoWidth;
-    canvasRef.current.height = videoHeight;    
-
-    const hand = await detector.estimateHands(video);
+      const hand = await detector.estimateHands(videoRef.current);
 
       if (hand.length > 0) {
           const GE = new GestureEstimator([
-            Gestures.hello,
-            Gestures.giyeok,
-          ]);
+              Gestures.hello,
+              Gestures.giyeok,
+          ])
 
           const gesture = await GE.estimate(hand, 7);
-
-          console.log("gesture", gesture);
 
           let gestureName = "";
 
@@ -81,11 +109,13 @@ function Handpose() {
   }
 
   const runHandpose = async () => {
+    await setUpCamera();
+
     const detector = await createDetector()
 
     setInterval(() => {
       detection(detector)
-    }, 10)
+    }, 100)
   }
 
   useEffect(() => {
@@ -95,20 +125,21 @@ function Handpose() {
   return (
     <div className="App">
       <header className="App-header">
-        <Webcam ref={webcamRef}
-          style={{
-            position: "absolute",
-            marginLeft: "auto",
-            marginRight: "auto",
-            left: 0,
-            right: 0,
-            textAlign: "center",
-            // WebkitTransform: "scaleX(-1)",
-            // transform: "scaleX(-1)",
-            zIndex: 9,
-            width: "auto",
-            height: "auto",
-          }} />
+        <video ref={videoRef}
+        autoPlay
+        muted
+        playsInline
+        style={{
+        position: "absolute",
+        marginLeft: "auto",
+        marginRight: "auto",
+        left: 0,
+        right: 0,
+        textAlign: "center",
+        zIndex: 9,
+        width: "auto",
+        height: "auto",
+        }} />
         <img alt='img' src='img/h.png' style={{
           position: "absolute",
           marginLeft: "auto",

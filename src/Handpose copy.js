@@ -13,6 +13,18 @@ function Handpose() {
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
 
+  const isIOS = () => {
+    return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  }
+
+  const isAndroid = () => {
+    return /Android/i.test(navigator.userAgent);
+  }
+
+  const isMobile = () => {
+    return isAndroid() || isIOS();
+  }
+
   const createDetector = async () => {
     const hands = handPoseDetection.SupportedModels.MediaPipeHands;
     const detectorConfig = {
@@ -24,7 +36,52 @@ function Handpose() {
     return handPoseDetection.createDetector(hands, detectorConfig);
   }
 
+  const setUpCamera = async () => {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      console.log("media is not avaiable")
+    }
+
+    const $size = { width: 640, height: 480 };
+    const $mobile_size = { width: 360, height: 270 };
+
+    const videoConfig = {
+      "audio": false,
+      "video": {
+        facingMode: "user",
+        width: isMobile() ? $mobile_size.width  : $size.width,
+        height: isMobile() ? $mobile_size.height : $size.height,
+      }
+    };
+
+    const stream = await navigator.mediaDevices.getUserMedia(videoConfig);
+
+    // const camera = new Camera();
+    // camera.video.srcObject = stream;
+
+    // await new Promise((resolve) => {
+    //   camera.video.onloadedmetadata = () => {
+    //     resolve(video);
+    //   }
+    // });
+
+    // camera.video.play();
+
+    console.log(webcamRef.current.video);
+
+    webcamRef.current.srcObject = stream;
+
+    const videoWidth = webcamRef.current.video.videoWidth;
+    const videoHeight = webcamRef.current.video.videoHeight;
+
+    webcamRef.current.video.width = videoWidth;
+    webcamRef.current.video.height = videoHeight;
+
+    canvasRef.current.width = videoWidth;
+    canvasRef.current.height = videoHeight;
+  }
+
   const detection = async (detector) => {
+
     if (typeof webcamRef.current !== "undefined" &&
     webcamRef.current !== null && webcamRef.current.video.readyState === 4
     ) {
@@ -39,14 +96,14 @@ function Handpose() {
     canvasRef.current.width = videoWidth;
     canvasRef.current.height = videoHeight;    
 
-    const hand = await detector.estimateHands(video);
+      const hand = await detector.estimateHands(video);
 
       if (hand.length > 0) {
           const GE = new GestureEstimator([
             Gestures.hello,
             Gestures.giyeok,
           ]);
-
+          
           const gesture = await GE.estimate(hand, 7);
 
           console.log("gesture", gesture);
@@ -85,7 +142,7 @@ function Handpose() {
 
     setInterval(() => {
       detection(detector)
-    }, 10)
+    }, 1000)
   }
 
   useEffect(() => {

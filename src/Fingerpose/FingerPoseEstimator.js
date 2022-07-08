@@ -83,12 +83,12 @@ export default class FingerPoseEstimator {
   // point1, point2 are 2d or 3d point arrays (xy[z])
   // returns either a single scalar (2d) or array of two slopes (3d)
   getSlopes(point1, point2) {
-    let slopeXY = this.calculateSlope(point1.x, point1.y, point2.x, point2.y);
+    let slopeXY = this.calculateSlope(point1.x, point1.y, point2.x, point2.y); // xy면과 방향의 각도
     if(point1.length == 2) {
       return slopeXY;
     }
 
-    let slopeYZ = this.calculateSlope(point1.y, point1.z, point2.y, point2.z)
+    let slopeYZ = this.calculateSlope(point1.y, point1.z, point2.y, point2.z) // yz면과 방향의 각도
     return [slopeXY, slopeYZ];
   }
 
@@ -268,20 +268,20 @@ export default class FingerPoseEstimator {
     let start_end_y_dist = startPoint.y - endPoint.y;
     let mid_end_y_dist = midPoint.y - endPoint.y;
 
-    let max_dist_x = Math.max(
+    let max_dist_x = Math.max( // x 좌표 기준으로 거리가 가장 큰 값
       Math.abs(start_mid_x_dist),
       Math.abs(start_end_x_dist),
       Math.abs(mid_end_x_dist)
     );
-    let max_dist_y = Math.max(
+    let max_dist_y = Math.max( // y 좌표 기준으로 거리가 가장 큰 값
       Math.abs(start_mid_y_dist),
       Math.abs(start_end_y_dist),
       Math.abs(mid_end_y_dist)
     );
 
-    let voteVertical = 0.0;
-    let voteDiagonal = 0.0;
-    let voteHorizontal = 0.0;
+    let voteVertical = 0.0; // 수직
+    let voteDiagonal = 0.0; // 대각선
+    let voteHorizontal = 0.0; // 수평
 
     let start_end_x_y_dist_ratio = max_dist_y / (max_dist_x + 0.00001);
     if(start_end_x_y_dist_ratio > 1.5) {
@@ -366,10 +366,10 @@ export default class FingerPoseEstimator {
 
   calculateSlope(point1x, point1y, point2x, point2y) {
 
-    let value = (point1y - point2y) / (point1x - point2x);
-    let slope = Math.atan(value) * 180 / Math.PI;
+    let value = (point1y - point2y) / (point1x - point2x); // tan 구하기
+    let slope = Math.atan(value) * 180 / Math.PI; // arc tan을 이용하여 각도 구하고 radian을 구함
 
-    if(slope <= 0) {
+    if(slope <= 0) { // 음수면 양수로 변경 (절대값)
       slope = -slope;
     }
     else if(slope > 0) {

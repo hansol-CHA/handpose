@@ -7,26 +7,25 @@ const fingerLookupIndices = {
 };
 
 export const drawHand = (predictions, ctx) => {
-  if (predictions.length > 0) {
+  if (predictions.length > 0) { // 양 손일경우 각 손 그리기
     predictions.forEach((prediction) => {
+      ctx.fillStyle = prediction.handedness === "Right" ? "indigo" : "Red"
+      ctx.strokeStyle = 'Yellow';
+      ctx.lineWidth = 2;
+
       const keypoints = prediction.keypoints;
-      const handedness = prediction.handedness;
       const fingers = Object.keys(fingerLookupIndices);
 
       for (let i = 0; i < fingers.length; i++) {
         const finger = fingers[i];
         const points = fingerLookupIndices[finger].map(idx => keypoints[idx]);
-
         const region = new Path2D();
         region.moveTo(points[0].x, points[0].y);
 
         for (let i = 1; i < points.length; i++) {
           const point = points[i];
           region.lineTo(point.x, point.y);
-
-          ctx.strokeStyle = 'White';
-          ctx.lineWidth = 2;
-          ctx.stroke(region)
+          ctx.stroke(region);
         }
       }
 
@@ -36,11 +35,8 @@ export const drawHand = (predictions, ctx) => {
 
         ctx.beginPath();
         ctx.arc(x, y, 5, 0, 3 * Math.PI)
-
-        ctx.fillStyle = handedness === "Right" ? "indigo" : "Yellow"
         ctx.fill();
       }
     })
   }
 }
-

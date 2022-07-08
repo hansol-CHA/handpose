@@ -1,3 +1,8 @@
+const Handedness = {
+  Left: "Left",
+  Right: "Right"
+}
+
 const Finger = {
 
     Thumb:  0,
@@ -94,5 +99,5 @@ const FingerCurl = {
   };
   
   export {
-    Finger, FingerCurl, FingerDirection 
+    Handedness, Finger, FingerCurl, FingerDirection 
   }  

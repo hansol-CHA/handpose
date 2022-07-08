@@ -3,41 +3,31 @@ export default class GestureDescription {
   
       // name (should be unique)
       this.name = name;
+
+      //left or right?
+      // this.handedness = handedness;
   
       // gesture as described by curls / directions
       this.curls = {};
       this.directions = {};
     }
   
-    addCurl(handedness, finger, curl, contrib=1.0) {
-      if(!this.curls[handedness]?.[finger]) {
-        this.curls[handedness] = {
-          ...this.curls[handedness],
-          [finger]: [[curl, contrib]],
-        }
-      } else {
-        this.curls[handedness] = {
-          ...this.curls[handedness],
-          [finger]: [...this.curls[handedness][finger], [curl, contrib]],
-        }
+    addCurl(finger, curl, contrib=1.0) {
+      if(typeof this.curls[finger] === 'undefined') {
+        this.curls[finger] = [];
       }
+      this.curls[finger].push([curl, contrib]);
     }
   
-    addDirection(handedness, finger, position, contrib=1.0) {
-      if(!this.directions[handedness]?.[finger]) {
-        this.directions[handedness] = {
-          ...this.directions[handedness],
-          [finger]: [[position, contrib]],
-        }
-      } else {
-        this.directions[handedness] = {
-          ...this.directions[handedness],
-          [finger]: [...this.directions[handedness][finger], [position, contrib]],
-        }
+    addDirection(finger, position, contrib=1.0) {
+      if(typeof this.directions[finger] === 'undefined') {
+        this.directions[finger] = [];
       }
+      this.directions[finger].push([position, contrib]);
     }
   
-    matchAgainst(detectedHandedness, detectedCurls, detectedDirections) {  
+    matchAgainst(detectedCurls, detectedDirections) {
+  
       let score = 0.0;
       let numParameters = 0;
   
@@ -46,7 +36,7 @@ export default class GestureDescription {
       for(let fingerIdx in detectedCurls) {
   
         let detectedCurl = detectedCurls[fingerIdx];
-        let expectedCurls = this.curls?.[detectedHandedness]?.[fingerIdx];
+        let expectedCurls = this.curls[fingerIdx];
   
         if(typeof expectedCurls === 'undefined') {
           // no curl description available for this finger
@@ -79,7 +69,7 @@ export default class GestureDescription {
       for(let fingerIdx in detectedDirections) {
   
         let detectedDirection = detectedDirections[fingerIdx];
-        let expectedDirections = this.directions?.[detectedHandedness]?.[fingerIdx];
+        let expectedDirections = this.directions[fingerIdx];
   
         if(typeof expectedDirections === 'undefined') {
           // no direction description available for this finger

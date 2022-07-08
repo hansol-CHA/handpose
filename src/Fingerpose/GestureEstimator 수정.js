@@ -27,29 +27,34 @@ export default class GestureEstimator {
 
     const gestureData = [];
 
-    for (let hand of hands) {
       let poseData = [];
       let gesturesFound = [];
 
-      for(let fingerIdx of Finger.all) {
-        poseData.push([
-          Finger.getName(fingerIdx),
-          FingerCurl.getName(hand.curls[fingerIdx]),
-          FingerDirection.getName(hand.directions[fingerIdx])
-        ]);
-      }
-
       // step 2: compare gesture description to each known gesture
       for(let gesture of this.gestures) {
+        let numberOfHands = Object.keys(gesture.curls).length; // 재할당....
+        console.log("gesture", gesture)
+        console.log("numberOfHands", numberOfHands)
 
-        let score = gesture.matchAgainst(hand.handedness, hand.curls, hand.directions);
+        for (let hand of hands) {
+          let score = gesture.matchAgainst(hand.handedness, hand.curls, hand.directions);
 
-        if(score >= minScore) {
-          gesturesFound.push({
-            name: gesture.name,
-            score: score,
-            numberOfHands: Object.keys(gesture.curls).length,
-          });
+          if(score >= minScore) {
+            gesturesFound.push({
+              name: gesture.name,
+              score: score,
+            });
+  
+            numberOfHands--;
+          }
+
+          for(let fingerIdx of Finger.all) {
+            poseData.push([
+              Finger.getName(fingerIdx),
+              FingerCurl.getName(hand.curls[fingerIdx]),
+              FingerDirection.getName(hand.directions[fingerIdx])
+            ]);
+          }
         }
       }
 
@@ -58,8 +63,10 @@ export default class GestureEstimator {
         poseData: poseData,
         gestures: gesturesFound
       })
-    }
 
-    return gestureData;
+    return {
+      isDetectedAllHands,
+      gestureData 
+    };
   }
 }
